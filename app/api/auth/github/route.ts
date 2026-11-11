@@ -1,16 +1,28 @@
-import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
+import { NextResponse } from 'next/server';
+
 export async function GET() {
-  const id = process.env.GITHUB_CLIENT_ID;
-  const callback = process.env.GITHUB_CALLBACK_URL;
-  if (!id || !callback) return NextResponse.redirect(new URL("/login?error=oauth_not_configured", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
-  const state = randomBytes(24).toString("hex");
-  const url = new URL("https://github.com/login/oauth/authorize");
-  url.searchParams.set("client_id", id);
-  url.searchParams.set("redirect_uri", callback);
-  url.searchParams.set("scope", "repo read:user user:email");
-  url.searchParams.set("state", state);
-  const response = NextResponse.redirect(url);
-  response.cookies.set("xiyu_oauth_state", state, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
-  return response;
+  const clientId = process.env.GITHUB_CLIENT_ID;
+
+  // Memastikan fallback URL mengarah ke domain Vercel, bukan localhost:3000
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://devxiyu.vercel.app';
+  const redirectUri = `${baseUrl}/api/auth/github/callback`;
+
+  // Validasi jika Client ID belum terpasang di Environment Variables
+  if (!clientId) {
+    return NextResponse.redirect(
+      new URL('/login?error=oauth_not_configured', baseUrl)
+    );
+  }
+
+  // Parameter scope untuk izin akses repositori GitHub
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: 'repo user',
+  });
+
+  // Redirect pengguna ke halaman otorisasi OAuth GitHub
+  return NextResponse.redirect(
+    `https://github.com/login/oauth/authorize?${params.toString()}`
+  );
 }
