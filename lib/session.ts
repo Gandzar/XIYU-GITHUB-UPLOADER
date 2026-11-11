@@ -9,12 +9,13 @@ export type UserSession = {
 };
 
 const password = process.env.SESSION_PASSWORD;
-if (!password || password.length < 32) {
-  // Build can run without secrets; routes fail closed until env is configured.
-}
+
 export const sessionOptions: SessionOptions = {
   cookieName: "xiyu_github_session",
-  password: password && password.length >= 32 ? password : "build-only-not-a-real-session-password-change-me",
+  // Gunakan password bawaan 32 karakter jika SESSION_PASSWORD di Vercel belum diisi
+  password: password && password.length >= 32 
+    ? password 
+    : "bagja_uploader_secret_session_key_32char_min",
   cookieOptions: {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -23,6 +24,7 @@ export const sessionOptions: SessionOptions = {
     maxAge: 60 * 60 * 24 * 7
   }
 };
+
 export async function getSession() {
   return getIronSession<UserSession>(await cookies(), sessionOptions);
 }
