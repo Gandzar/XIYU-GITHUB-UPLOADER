@@ -8,13 +8,10 @@ export type UserSession = {
   name?: string | null;
 };
 
-const password = process.env.SESSION_PASSWORD;
-
 export const sessionOptions: SessionOptions = {
   cookieName: "xiyu_github_session",
-  // Gunakan password bawaan 32 karakter jika SESSION_PASSWORD di Vercel belum diisi
-  password: password && password.length >= 32 
-    ? password 
+  password: process.env.SESSION_PASSWORD && process.env.SESSION_PASSWORD.length >= 32 
+    ? process.env.SESSION_PASSWORD 
     : "bagja_uploader_secret_session_key_32char_min",
   cookieOptions: {
     httpOnly: true,
