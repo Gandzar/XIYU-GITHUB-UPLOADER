@@ -1,21 +1,26 @@
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Ambil Client ID dari environment variable
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://devxiyu.vercel.app';
+
+  // Deteksi domain aktif secara otomatis jika NEXTAUTH_URL belum terbaca
+  const url = new URL(request.url);
+  const baseUrl = process.env.NEXTAUTH_URL || `${url.protocol}//${url.host}`;
   const redirectUri = `${baseUrl}/api/auth/github/callback`;
 
-  if (!clientId) {
+  // Jika Client ID tidak ada / kosong, lempar balik ke login dengan pesan khusus
+  if (!clientId || clientId.trim() === '') {
+    console.error('ERROR: GITHUB_CLIENT_ID is missing in process.env');
     return NextResponse.redirect(
-      new URL('/login?error=oauth_not_configured', baseUrl)
+      new URL('/login?error=missing_client_id', baseUrl)
     );
   }
 
-  // Buat URL otorisasi GitHub OAuth dengan parameter yang benar
-  const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
-  githubAuthUrl.searchParams.append('client_id', clientId);
-  githubAuthUrl.searchParams.append('redirect_uri', redirectUri);
-  githubAuthUrl.searchParams.append('scope', 'repo user');
+  // Susun URL otorisasi GitHub OAuth dengan encoding aman
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(
+    clientId
+  )}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo%20user`;
 
-  return NextResponse.redirect(githubAuthUrl.toString());
+  return NextResponse.redirect(githubAuthUrl);
 }
