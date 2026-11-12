@@ -1,25 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
+import { STATE_COOKIE, appBase, cookieOpts } from "@/lib/oauth";
 
-export async function GET(request: Request) {
-  const clientId = process.env.GITHUB_CLIENT_ID;
+export const dynamic = "force-dynamic";
 
-  // Deteksi domain Vercel sacara otomatis
-  const url = new URL(request.url);
-  const baseUrl = process.env.NEXTAUTH_URL || `${url.protocol}//${url.host}`;
-  const redirectUri = `${baseUrl}/api/auth/github/callback`;
-
-  // Cek naha GITHUB_CLIENT_ID aya
-  if (!clientId || clientId.trim() === '') {
-    return NextResponse.redirect(
-      new URL('/login?error=missing_client_id', baseUrl)
-    );
+export async function GET(req: Request) {
+  const base = appBase(req);
+  const id = process.env.GITHUB_CLIENT_ID;
+  if (!id || !process.env.GITHUB_CLIENT_SECRET) {
+    return NextResponse.redirect(new URL("/login?error=oauth_not_configured", base));
   }
-
-  // Gunakeun URLSearchParams sangkan parameter di-encode ku sistem standar GitHub
-  const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
-  githubAuthUrl.searchParams.set('client_id', clientId);
-  githubAuthUrl.searchParams.set('redirect_uri', redirectUri);
-  githubAuthUrl.searchParams.set('scope', 'repo user');
-
-  return NextResponse.redirect(githubAuthUrl.toString());
+  const state = randomBytes(24).toString("hex");
+  const url = new URL("https://github.com/login/oauth/authorize");
+  url.searchParams.set("client_id", id);
+  url.searchParams.set("redirect_uri", `${base}/api/auth/github/callback`);
+  url.searchParams.set("scope", "repo read:user user:email");
+  url.searchParams.set("state", state);
+  const response = NextResponse.redirect(url);
+  response.cookies.set(STATE_COOKIE, state, cookieOpts(600));
+  return response;
 }
